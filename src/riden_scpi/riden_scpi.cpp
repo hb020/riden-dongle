@@ -7,7 +7,12 @@
 #include <riden_scpi/riden_scpi.h>
 
 #include <Arduino.h>
+#if defined(ARDUINO_ARCH_ESP32)
+#include <ESPmDNS.h>
+#include <mdns.h>
+#elif defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266mDNS.h>
+#endif
 #include <SCPI_Parser.h>
 #include <functional>
 
@@ -190,7 +195,11 @@ scpi_result_t RidenScpi::SCPI_Flush(scpi_t *context)
     if (ridenScpi->client) {
         ridenScpi->client.write(ridenScpi->write_buffer, ridenScpi->write_buffer_length);
         ridenScpi->write_buffer_length = 0;
+#if defined(ARDUINO_ARCH_ESP8266)
         ridenScpi->client.flush();
+#elif defined(ARDUINO_ARCH_ESP32)
+        ridenScpi->client.clear();
+#endif            
     }
     return SCPI_RES_OK;
 }
@@ -771,11 +780,17 @@ bool RidenScpi::begin()
     tcpServer.begin();
     tcpServer.setNoDelay(true);
 
+#if defined(ARDUINO_ARCH_ESP8266)
     if (MDNS.isRunning()) {
         LOG_LN("RidenScpi advertising as scpi-raw.");
         auto scpi_service = MDNS.addService(NULL, "scpi-raw", "tcp", tcpServer.port());
         MDNS.addServiceTxt(scpi_service, "version", SCPI_STD_VERSION_REVISION);
     }
+#elif defined(ARDUINO_ARCH_ESP32)
+        LOG_LN("RidenScpi advertising as scpi-raw.");
+        MDNS.addService("scpi-raw", "tcp", _port);
+        MDNS.addServiceTxt("scpi-raw", "tcp", "version", SCPI_STD_VERSION_REVISION);
+#endif
 
     LOG_LN("RidenScpi initialized");
 
@@ -847,7 +862,7 @@ bool RidenScpi::loop()
 
 uint16_t RidenScpi::port()
 {
-    return tcpServer.port();
+    return _port;
 }
 
 std::list<IPAddress> RidenScpi::get_connected_clients()

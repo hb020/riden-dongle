@@ -8,7 +8,15 @@
 #include <riden_logging/riden_logging.h>
 #include <vxi11_server/vxi_server.h>
 
+#if defined(ARDUINO_ARCH_ESP32)
+#include <ESPmDNS.h>
+#include <mdns.h>
+#elif defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266mDNS.h>
+#endif
+#if defined(ARDUINO_ARCH_ESP32)
+#include "Update.h"
+#endif
 #include <TinyTemplateEngineMemoryReader.h>
 #include <list>
 
@@ -123,12 +131,21 @@ bool RidenHttpServer::begin()
     server.onNotFound(std::bind(&RidenHttpServer::handle_not_found, this));
     server.begin(port());
 
+#if defined(ARDUINO_ARCH_ESP8266)
     if (MDNS.isRunning() && modbus.is_connected()) {
         auto lxi_service = MDNS.addService(NULL, "lxi", "tcp", port()); // allows discovery by lxi-tools
         MDNS.addServiceTxt(lxi_service, "path", "/");
         auto http_service = MDNS.addService(NULL, "http", "tcp", port());
         MDNS.addServiceTxt(http_service, "path", "/");
     }
+#elif defined(ARDUINO_ARCH_ESP32)
+    if (modbus.is_connected()) {
+        MDNS.addService("lxi", "tcp", port()); // allows discovery by lxi-tools
+        MDNS.addServiceTxt("lxi", "tcp", "path", "/");
+        MDNS.addService("http", "tcp", port());
+        MDNS.addServiceTxt("http", "tcp", "path", "/");
+    }
+#endif
 
     return true;
 }
@@ -311,7 +328,11 @@ void RidenHttpServer::handle_firmware_update_post()
         // if(_debug) Serial.setDebugOutput(true);
         uint32_t maxSketchSpace;
 
+#if defined(ARDUINO_ARCH_ESP8266)
         WiFiUDP::stopAll();
+#elif defined(ARDUINO_ARCH_ESP32)
+        // TODO: stop all UDP connections
+#endif
         maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
 
         if (!Update.begin(maxSketchSpace)) { // start with max available size
@@ -335,7 +356,11 @@ void RidenHttpServer::finish_firmware_update_post()
         server.setContentLength(CONTENT_LENGTH_UNKNOWN);
         server.send(200, "text/html", HTML_HEADER);
         server.sendContent(HTML_DONGLE_UPDATE_1);
+#if defined(ARDUINO_ARCH_ESP8266)        
         server.sendContent(Update.getErrorString());
+#elif defined(ARDUINO_ARCH_ESP32)
+        server.sendContent(Update.errorString());
+#endif
         server.sendContent(HTML_DONGLE_UPDATE_2);
         server.sendContent(HTML_FOOTER);
         server.sendContent("");
@@ -388,7 +413,11 @@ void RidenHttpServer::handle_reboot_dongle_get()
     server.sendContent(HTML_FOOTER);
     server.sendContent("");
     delay(500);
+#if defined(ARDUINO_ARCH_ESP8266)            
     ESP.reset();
+#elif defined(ARDUINO_ARCH_ESP32)
+    ESP.restart();
+#endif
     delay(1000);
 }
 
@@ -476,9 +505,15 @@ void RidenHttpServer::send_network_info()
     send_info_row("Default Gateway", WiFi.gatewayIP().toString());
     for (int i = 0;; i++) {
         auto dns = WiFi.dnsIP(i);
+#if defined(ARDUINO_ARCH_ESP8266)       
         if (!dns.isSet()) {
             break;
         }
+#elif defined(ARDUINO_ARCH_ESP32)        
+        if (dns == IPAddress(0, 0, 0, 0)) {
+            break;
+        }
+#endif        
         send_info_row("DNS", dns.toString());
     }
     server.sendContent("                </tbody>");

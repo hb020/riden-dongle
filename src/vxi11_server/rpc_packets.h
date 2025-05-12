@@ -7,7 +7,11 @@
 */
 
 #include "utilities.h"
+#if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
+#elif defined(ARDUINO_ARCH_ESP32)
+#include <WiFi.h>
+#endif
 #include <WiFiUdp.h>
 
 /*  The get functions take the connection (UDP or TCP client),

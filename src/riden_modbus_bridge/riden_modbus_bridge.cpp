@@ -5,7 +5,12 @@
 #include <riden_logging/riden_logging.h>
 #include <riden_modbus_bridge/riden_modbus_bridge.h>
 
+#if defined(ARDUINO_ARCH_ESP32)
+#include <ESPmDNS.h>
+#include <mdns.h>
+#elif defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266mDNS.h>
+#endif
 
 using namespace RidenDongle;
 
@@ -31,11 +36,19 @@ bool RidenModbusBridge::begin()
     modbus_tcp.onRaw(::modbus_tcp_raw_callback);
     modbus_tcp.server();
 
+#if defined(ARDUINO_ARCH_ESP8266)
     if (MDNS.isRunning()) {
         // See https://github.com/espressif/esp-idf/blob/master/examples/protocols/modbus/tcp/mb_tcp_master/main/tcp_master.c#L266
         auto modbus_service = MDNS.addService(NULL, "modbus", "tcp", MODBUSTCP_PORT);
         MDNS.addServiceTxt(modbus_service, "unitid", MODBUS_ADDRESS);
     }
+#elif defined(ARDUINO_ARCH_ESP32)
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+
+        MDNS.addService("modbus", "tcp", MODBUSTCP_PORT);
+        MDNS.addServiceTxt("modbus", "tcp", "unitid", STR(MODBUS_ADDRESS));
+#endif
 
     LOG_LN("RidenModbusBridge initialized");
 
@@ -157,7 +170,11 @@ void RidenModbusTCP::disconnect_client(const IPAddress &ip)
 {
     int8_t n = getMaster(ip);
     if (n != -1) {
+#if defined(ARDUINO_ARCH_ESP8266)
         tcpclient[n]->flush();
+#elif defined(ARDUINO_ARCH_ESP32)
+        tcpclient[n]->clear();
+#endif        
         delete tcpclient[n];
         tcpclient[n] = nullptr;
     }

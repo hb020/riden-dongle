@@ -9,8 +9,11 @@
 #include <riden_scpi/riden_scpi.h>
 #include <vxi11_server/vxi_server.h>
 
+#if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WebServer.h>
-
+#elif defined(ARDUINO_ARCH_ESP32)
+#include <WebServer.h>
+#endif
 #define HTTP_RAW_PORT 80
 
 namespace RidenDongle
@@ -29,7 +32,11 @@ class RidenHttpServer
     RidenScpi &scpi;
     RidenModbusBridge &bridge;
     VXI_Server &vxi_server;
+#if defined(ARDUINO_ARCH_ESP8266)    
     ESP8266WebServer server;
+#elif defined(ARDUINO_ARCH_ESP32)
+    WebServer server;
+#endif
 
     void handle_root_get();
     void handle_psu_get();

@@ -149,7 +149,11 @@ void send_bind_packet(WiFiClient &tcp, uint32_t len)
         ; // wait for tcp to be available
 
     tcp.write(tcp_response_prefix_buffer, len + 4); // add 4 to the length to account for the tcp_response_prefix
+#if defined(ARDUINO_ARCH_ESP8266)
     tcp.flush();
+#elif defined(ARDUINO_ARCH_ESP32)
+    tcp.clear();
+#endif       
 
     LOG_F("\nSent %d bytes to %s:%d\n", len, tcp.remoteIP().toString().c_str(), tcp.remotePort());
     LOG_DUMP(tcp_response_prefix_buffer, len + 4)
@@ -184,7 +188,11 @@ void send_vxi_packet(WiFiClient &tcp, uint32_t len)
         ; // wait for tcp to be available
 
     tcp.write(vxi_response_prefix_buffer, len + 4); // add 4 to the length to account for the vxi_response_prefix
+#if defined(ARDUINO_ARCH_ESP8266)
     tcp.flush();
+#elif defined(ARDUINO_ARCH_ESP32)
+    tcp.clear();
+#endif 
 
     LOG_F("\nSent %d bytes to %s:%d\n", len, tcp.remoteIP().toString().c_str(), tcp.remotePort());
     LOG_DUMP(vxi_response_prefix_buffer, len + 4)

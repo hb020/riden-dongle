@@ -5,7 +5,11 @@
   @brief  Declaration and definition of WiFiServer_ext class.
 */
 
+#if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
+#elif defined(ARDUINO_ARCH_ESP32)
+#include <WiFi.h>
+#endif
 
 /*!
   @brief  Minor extension of WiFiServer class to allow initialization

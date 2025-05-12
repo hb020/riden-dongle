@@ -6,7 +6,11 @@
 
 #include <riden_modbus/riden_modbus.h>
 
+#if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
+#elif defined(ARDUINO_ARCH_ESP32)
+#include <WiFi.h>
+#endif
 #include <SCPI_Parser.h>
 #include <list>
 
@@ -21,7 +25,7 @@ namespace RidenDongle
 class RidenScpi
 {
   public:
-    explicit RidenScpi(RidenModbus &ridenModbus, uint16_t port = DEFAULT_SCPI_PORT) : ridenModbus(ridenModbus), tcpServer(port) {}
+    explicit RidenScpi(RidenModbus &ridenModbus, uint16_t port = DEFAULT_SCPI_PORT) : ridenModbus(ridenModbus), tcpServer(port), _port(port) {}
 
     bool begin();
     bool loop();
@@ -43,6 +47,7 @@ class RidenScpi
 
   private:
     RidenModbus &ridenModbus;
+    uint16_t _port;
 
     bool initialized = false;
     const char *idn1 = "Riden"; // <company name>

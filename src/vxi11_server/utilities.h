@@ -6,8 +6,11 @@
 
 #include <riden_logging/riden_logging.h> // for logging
 #include <stdint.h>
+#if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
-
+#elif defined(ARDUINO_ARCH_ESP32)
+#include <WiFi.h>
+#endif
 /*!
   @brief  Manages storage and conversion of 4-byte big-endian data.
 

@@ -15,12 +15,25 @@
 #include <Arduino.h>
 #include <ArduinoOTA.h>
 #include <EEPROM.h>
+#if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFi.h>
+#elif defined(ARDUINO_ARCH_ESP32)
+#include <WiFi.h>
+#endif
+#if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266WiFiGratuitous.h>
+#endif
+#if defined(ARDUINO_ARCH_ESP32)
+#include <ESPmDNS.h>
+#include <mdns.h>
+#elif defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266mDNS.h>
+#endif
 #include <Ticker.h>
 #include <WiFiManager.h>
+#if defined(ARDUINO_ARCH_ESP8266)
 #include <coredecls.h>
+#endif
 #include <time.h>
 
 #define NTP_SERVER "pool.ntp.org"
@@ -98,7 +111,11 @@ void setup()
         sprintf(hostname, "%s-%08u", riden_modbus.get_type().c_str(), serial_number);
 
         if (!connect_wifi(hostname)) {
+#if defined(ARDUINO_ARCH_ESP8266)            
             ESP.reset();
+#elif defined(ARDUINO_ARCH_ESP32)
+            ESP.restart();
+#endif
             delay(1000);
         }
 
@@ -114,7 +131,11 @@ void setup()
         connected = true;
     } else {
         if (!connect_wifi(nullptr)) {
+#if defined(ARDUINO_ARCH_ESP8266)            
             ESP.reset();
+#elif defined(ARDUINO_ARCH_ESP32)
+            ESP.restart();
+#endif
             delay(1000);
         }
         led_ticker.attach(0.1, tick);
@@ -147,8 +168,9 @@ static bool connect_wifi(const char *hostname)
 
         LOG_F("WiFi SSID: %s\r\n", WiFi.SSID().c_str());
         LOG_F("IP: %s\r\n", WiFi.localIP().toString().c_str());
-
+#if defined(ARDUINO_ARCH_ESP8266)
         experimental::ESP8266WiFiGratuitous::stationKeepAliveSetIntervalMs();
+#endif        
         if (hostname != nullptr) {
             if (!MDNS.begin(hostname)) {
                 while (true) {
@@ -158,8 +180,13 @@ static bool connect_wifi(const char *hostname)
             String tz = riden_config.get_timezone_spec();
             if (tz.length() > 0) {
                 // Get time via NTP
+#if defined(ARDUINO_ARCH_ESP8266)            
                 settimeofday_cb(on_time_received);
                 configTime(tz.c_str(), NTP_SERVER);
+#elif defined(ARDUINO_ARCH_ESP32)
+                // TODO: make a call to the callback function when time is set
+                configTzTime(tz.c_str(), NTP_SERVER);
+#endif                            
             }
         }
         ArduinoOTA.setHostname(hostname);
@@ -192,7 +219,9 @@ void loop()
             did_update_time = true;
         }
 
+#if defined(ARDUINO_ARCH_ESP8266)        
         MDNS.update();
+#endif        
         riden_modbus.loop();
         riden_scpi.loop();
         modbus_bridge.loop();

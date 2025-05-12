@@ -2,7 +2,12 @@
 #include "rpc_enums.h"
 #include "rpc_packets.h"
 
+#if defined(ARDUINO_ARCH_ESP32)
+#include <ESPmDNS.h>
+#include <mdns.h>
+#elif defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266mDNS.h>
+#endif
 #include <SCPI_Parser.h>
 #include <list>
 
@@ -63,11 +68,17 @@ void VXI_Server::begin(bool bNext)
 
     LOG_F("Listening for VXI commands on TCP port %u\n", (uint32_t)vxi_port);
     if (vxi_port.is_noncyclic()) {
+#if defined(ARDUINO_ARCH_ESP8266)
         if (MDNS.isRunning()) {
             LOG_LN("VXI_Server advertising as vxi-11.");
             auto scpi_service = MDNS.addService(NULL, "vxi-11", "tcp", (uint32_t)vxi_port);
             MDNS.addServiceTxt(scpi_service, "version", SCPI_STD_VERSION_REVISION);
         }
+#elif defined(ARDUINO_ARCH_ESP32)
+            LOG_LN("VXI_Server advertising as vxi-11.");
+            MDNS.addService("vxi-11", "tcp", (uint32_t)vxi_port);
+            MDNS.addServiceTxt("vxi-11", "tcp", "version", SCPI_STD_VERSION_REVISION);
+#endif        
     }
     // else: no mDNS, port changes too often
 }
