@@ -88,10 +88,22 @@ static void on_time_received();
 void setup()
 {
     pinMode(LED_BUILTIN, OUTPUT);
+#if defined(ARDUINO_ARCH_ESP32)
+#define LED_OFF LOW
+#define LED_ON HIGH
+#else
+#define LED_OFF HIGH
+#define LED_ON LOW
+#endif
+    digitalWrite(LED_BUILTIN, LED_ON); // turn on led
+
     led_ticker.attach(0.6, tick);
 
 #ifdef MODBUS_USE_SOFWARE_SERIAL
     Serial.begin(74880);
+#ifdef MOCK_RIDEN
+    LOG_LN("Start Riden-Dongle");
+#endif
     delay(1000);
 #endif
 
@@ -111,6 +123,11 @@ void setup()
         sprintf(hostname, "%s-%08u", riden_modbus.get_type().c_str(), serial_number);
 
         if (!connect_wifi(hostname)) {
+#ifdef MOCK_RIDEN
+            LOG_LN("Not Connected, resetting Riden-Dongle");
+            delay(1000);
+#endif
+
 #if defined(ARDUINO_ARCH_ESP8266)            
             ESP.reset();
 #elif defined(ARDUINO_ARCH_ESP32)
@@ -126,11 +143,16 @@ void setup()
 
         // turn off led
         led_ticker.detach();
-        digitalWrite(LED_BUILTIN, HIGH);
+        digitalWrite(LED_BUILTIN, LED_OFF);
 
         connected = true;
     } else {
         if (!connect_wifi(nullptr)) {
+#ifdef MOCK_RIDEN
+            LOG_LN("Not Connected, resetting Riden-Dongle");
+            delay(1000);
+#endif
+
 #if defined(ARDUINO_ARCH_ESP8266)            
             ESP.reset();
 #elif defined(ARDUINO_ARCH_ESP32)
@@ -143,6 +165,10 @@ void setup()
     }
 
     http_server.begin();
+#ifdef MOCK_RIDEN
+    LOG_LN("End of Setup, starting loop");
+#endif
+
 }
 
 static bool connect_wifi(const char *hostname)
