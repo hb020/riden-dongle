@@ -400,7 +400,7 @@ Riden standard firmware, and Unisoft "1p" versions and up, do _not_ exhibit this
 - If your dongle is programmed, but you cannot connect to it, try setting the PSU's 'UART Interface' setting to 'WiFi' again to see if it now works (this is only for testing). If the dongle then reacts, you likely have not done all required hardware modifications, especially:
   - the resistor to EN.
   - removing/cutting the EN pin from the header.
-- If your local network uses IPv6 or has multiple subnets that are not subdivided by `/24` (`255.255.255.0`, "class C"), you may have problems connecting to it. The dongle will expect IPv4, a subnet mask of `255.255.255.0` and a router at address `*.*.*.1`.
+- If your local network uses IPv6 or has multiple subnets that are not subdivided by `/24` (`255.255.255.0`, "class C"), you may have problems connecting to it. The dongle will expect IPv4, a subnet mask of `255.255.255.0` and a router + DNS server at address `*.*.*.1`. (it uses DNS for NTP, it will connect to pool.ntp.org)
 - In very rare cases, the dongle will not detect the PSU after a cold start. If that happens, reboot the dongle via the web interface (do not reboot the PSU), as will be shown anyway in the web interface.
 
 ## Credits
