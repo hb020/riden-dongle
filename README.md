@@ -117,6 +117,7 @@ Whatever you use, in order to program the device, you will need the following:
 - power of course: 5V + GND (on the existing header).
 - connect your serial link to GND, RX, TX (on the existing header)
 - pull EN to 3V3 all the time via a resistor (10k). Take the 3V3 from the insides of the module, and not from the header, as some dongles do not have the 3V3 header pin connected.
+- remove the EN pin from the header. If you have retrofitted a newer dongle, also remove the ISP pin.
 - during boot, connect GPIO0 (aka PGM) to GND for a short period, and after that, pull it to 3V3 via a resistor (10k). A push button may be helpful here.
 - not strictly needed, but helpful: a reset button connected to RST/RESET and GND. If used, programming will be easier, as there is no need for power cycling to do programming. To initiate programming, push both RESET and PGM, let go of RESET, and then let go of PGM.
 
