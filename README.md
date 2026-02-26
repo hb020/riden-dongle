@@ -91,8 +91,19 @@ VXI-11 does not have this problem, since the commands are handled synchronously,
 
 ## Hardware Preparations
 
-Note:
-> There are various dongles available. This firmware is at this moment only compatible with ESP-12F based modules. The newer dongles use an ESP8684, but it is possible to do a retrofit with an ESP-12F. See below.*
+### Prerequisites
+
+You will need the following:
+
+- a Riden WiFi module (either the original one with ESP-12F, or the newer one with the ESP8684, which then must be retrofitted with an ESP-12F, see below).
+- a computer with a serial link to flash the firmware (USB to TTL adapter, or similar).
+- a soldering iron and some solder.
+- 10k resistors. Depending on the module, you will need 1 or 2 at least. If you do not have 10k, any value between 4k7 and 47k will do.
+- a 5V power supply
+- some wires to connect to the modules' header pins.
+- a WiFi network to connect the module to, using 2.4GHz b/g/n WiFi (the module does not support 5GHz WiFi, nor any recent security protocols).
+
+### The preparation for programming
 
 You will need to make some changes to the dongle. The 2 most important being:
 
@@ -108,6 +119,8 @@ Whatever you use, in order to program the device, you will need the following:
 - pull EN to 3V3 all the time via a resistor (10k). Take the 3V3 from the insides of the module, and not from the header, as some dongles do not have the 3V3 header pin connected.
 - during boot, connect GPIO0 (aka PGM) to GND for a short period, and after that, pull it to 3V3 via a resistor (10k). A push button may be helpful here.
 - not strictly needed, but helpful: a reset button connected to RST/RESET and GND. If used, programming will be easier, as there is no need for power cycling to do programming. To initiate programming, push both RESET and PGM, let go of RESET, and then let go of PGM.
+
+### The different dongles and how to adapt them
 
 _Dongle with ESP-12F:_
 
@@ -129,15 +142,25 @@ These are the newer dongles.
 
 ![Image](esp8684_based.jpg)
 
-That ESP8684 is not supported, and is not likely to be supported soon, as Riden has flashed its own proprietary firmware on it and has encrypted it (the SPI_BOOT_CRYPT_CNT eFuse = 0b111). Unless we get access to their encryption key, we will not be able to flash it.
+That ESP8684 is not supported, and is not likely to be supported soon,
+as Riden has flashed its own proprietary firmware on it and has encrypted
+it (the SPI_BOOT_CRYPT_CNT eFuse = 0b111). Unless we get access to their
+encryption key, we will not be able to flash it.
 
-**But** you can make the dongle work by removing the ESP8684 and soldering a ESP-12F in place. Those WiFi modules can still be found. See here how to do it:
+**But** you can make the dongle work by removing the ESP8684
+and soldering a ESP-12F in place. Those WiFi modules can still be found. See here how to do it:
 
 ![Image](riden-retrograded-dongle-schema.png)
 
 (the led on the board will not be used by the software)
 
-Be aware that some sellers of Riden dongles may deliver you an ESP8684 dongle, even if their images show a ESP-12F on the dongle.
+Be aware that some sellers of Riden dongles may deliver you an
+ESP8684 dongle, even if their images show a ESP-12F on the dongle.
+
+There are reports of retrofitting the newer dongles with a ESPC5-12E
+(see [rdtech-esphome](https://github.com/wildekek/rdtech-esphome)), which is
+an almost pin compatible ESP32 version of the ESP-12F. This firmware
+is not (yet) suited for that module.
 
 ## Download the Firmware from GitHub
 
@@ -155,7 +178,10 @@ The firmware is located at `.pio/build/esp12e/firmware.bin`.
 
 ## Flashing the Firmware
 
-Provided you have prepared the hardware as described, and have either compiled, or downloaded a binary, you must connect the dongle to your computer as you would when flashing any other ESP12F module.
+Provided you have prepared the hardware as described,
+and have either compiled, or downloaded a binary, you
+must connect the dongle to your computer as you would
+when flashing any other ESP12F module.
 
 You can use multiple tools to flash the firmware. The most well known are:
 
@@ -177,27 +203,59 @@ changes. You need to select `TTL` as the UART Interface mode,
 
 Re-insert the module and power up the power supply.
 
-The module will begin to flash, first slowly and then
+## First startup, and how to connect to your WiFi
+
+At startup, the module will begin to flash, first slowly and then
 faster. If it starts flashing really fast (5 flashes
 per second), you probably misconfigured the power supply.
 Double-check, and if you are still having issues, add
 an issue to the Github repository.
 
-If all is well, the module has created a new access
-point, named `RDxxxx-ssssssss` (`xxxx` is the model
+The WiFi connection process is the same as with many other ESP based devices,
+and is handled by a module called [WiFiManager](https://github.com/tzapu/WiFiManager). In essence:
+
+>The module wants to know your WiFi credentials. If it knew them
+from before, it will try to connect automatically. If not, it
+sets up its own WiFi, asks you to connect to it, shows a web
+page asking you to enter YOUR WiFi's credentials in there, and
+then it can connect to your WiFi.
+
+If it did not have your WiFi credentials, the module will have created a new WiFi access
+point, named `RDxxxx-ssssssss` or `ESP_xxxx` (`xxxx` is the model
 and `ssssssss` is the serial number), e.g.
 `RD6006-00001234`.
 
 Connect to this access point, and you will be greeted
-by a web page allowing you to configure the WiFi network
-that the module should connect to.
+by a web page (the technology's name is "captive portal") allowing you
+to configure the WiFi network that the module should connect to.
 
-Follow the instructions, and save the configuration.
+Notes:
+
+> Please be aware that some phones detect that there is no internet on that
+WiFi and fall back to another WiFi or to 4G/5G. That will cause the captive
+portal page to not show up. That is a common issue with captive portals,
+and not specific to this firmware. If that happens, either deactivate that
+'feature' on your phone or quickly open a web browser and navigate
+to `http://192.168.4.1`, and the configuration page should show up.
+Or use another phone/tablet/PC.
+
+> You should not need to enter any password in order to get to that configuration
+page, as the module's WiFi is open. If you are asked for a password before arriving
+on the web page, you likely have tried connecting to another WiFi. Double-check that
+you are connecting to the correct WiFi.
+
+> Don't be disturbed by the IP address of that configuration page,
+as it is on the dongle's Wifi, it has nothing to do with your WiFi network.
+
+Follow the instructions, enter _YOUR_ WiFi's credentials, and submit the form.
+The module will now try to connect to your WiFi.
 
 If all goes well, the blue LED will start to flash slowly
 after a short while, and eventually stop. You should now
 be able to connect to the dongle at
-http://RDxxxx-ssssssss.local.
+`http://RDxxxx-ssssssss.local`. If that does not work, try
+`http://<ip address>`, where `<ip address>` is the IP address of
+the dongle on your WiFi. You can find that in your router's DHCP client list.
 
 ## Power Supply Configuration requirements
 
@@ -273,18 +331,24 @@ It also allows reading various values:
 - temperatures
 - ...
 
-The output values are graphed (updated every second), and will allow different time scales and zooming in.
+The output values are graphed (updated every second), and
+will allow different time scales and zooming in.
 
 <kbd>![Image](configpage.png)</kbd>
 
 ### Configuration
 
-The `Config` web page allows configuration of the time settings, allows rebooting of the PSU or the module, but also allows **OTA firmware updates** of the WiFi module (not of the PSU). 
+The `Configure` web page allows configuration of the time settings, the baud rate,
+allows rebooting of the PSU or the module, but also allows **OTA firmware updates**
+of the WiFi module (not of the PSU).
 
-You may prefer
-to use OTA update instead of having to remove
-the module from the power supply and connecting
-it to a computer.
+You may prefer to use OTA update instead of having to remove
+the module from the power supply and connecting it to a computer.
+
+'Reboot Dongle' will reboot the WiFi module (not the PSU), and no data will be lost.
+
+'Reboot Dongle to Web Configuration Portal' will take you back to the WiFi
+installation process. See [First startup, and how to connect to your WiFi](#first-startup-and-how-to-connect-to-your-wifi) above.
 
 ## Limitations
 
@@ -330,6 +394,14 @@ produce an incorrect result. Likewise the SCPI command
 `SYST:BEEP:STATE?` may also return an incorrect value.
 
 Riden standard firmware, and Unisoft "1p" versions and up, do _not_ exhibit this issue.
+
+## Troubleshooting
+
+- If your dongle is programmed, but you cannot connect to it, try setting the PSU's 'UART Interface' setting to 'WiFi' again to see if it now works (this is only for testing). If the dongle then reacts, you likely have not done all required hardware modifications, especially:
+  - the resistor to EN.
+  - removing/cutting the EN pin from the header.
+- If your local network uses IPv6 or has multiple subnets that are not subdivided by `/24` (`255.255.255.0`, "class C"), you may have problems connecting to it. The dongle will expect IPv4, a subnet mask of `255.255.255.0` and a router at address `*.*.*.1`.
+- In very rare cases, the dongle will not detect the PSU after a cold start. If that happens, reboot the dongle via the web interface (do not reboot the PSU), as will be shown anyway in the web interface.
 
 ## Credits
 
